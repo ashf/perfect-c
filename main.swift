@@ -1,6 +1,7 @@
 import AVFoundation
 import AppKit
 import Accelerate
+import ServiceManagement
 
 let noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 let toleranceCents = 15.0
@@ -68,6 +69,26 @@ statusItem.button?.title = "🎤 …"
 statusItem.menu = NSMenu()
 statusItem.menu!.addItem(withTitle: "Sing a perfect C (±\(Int(toleranceCents))¢, any octave)", action: nil, keyEquivalent: "")
 statusItem.menu!.addItem(.separator())
+
+final class LoginItemToggle: NSObject {
+    @objc func toggle(_ item: NSMenuItem) {
+        let service = SMAppService.mainApp
+        do {
+            if service.status == .enabled { try service.unregister() } else { try service.register() }
+        } catch { NSSound.beep() }
+        item.state = service.status == .enabled ? .on : .off
+    }
+}
+
+// Opt in on first launch only, so turning it off sticks.
+if !UserDefaults.standard.bool(forKey: "loginItemConfigured") {
+    try? SMAppService.mainApp.register()
+    UserDefaults.standard.set(true, forKey: "loginItemConfigured")
+}
+let loginToggle = LoginItemToggle()
+let loginItem = statusItem.menu!.addItem(withTitle: "Launch at Login", action: #selector(LoginItemToggle.toggle(_:)), keyEquivalent: "")
+loginItem.target = loginToggle
+loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
 statusItem.menu!.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
 let engine = AVAudioEngine()

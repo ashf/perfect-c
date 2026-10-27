@@ -17,6 +17,8 @@ open PerfectC.app
 
 Allow microphone access when macOS asks. To quit, click the menu bar item and choose Quit.
 
+On first launch the app adds itself to your login items, so it starts when you log in. Untick **Launch at Login** in its menu to stop that. Login items point at the app's location, so move `PerfectC.app` to `/Applications` before the first launch if you don't want it tied to this folder.
+
 ## Self-test
 
 ```sh

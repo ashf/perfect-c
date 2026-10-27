@@ -62,6 +62,9 @@ if CommandLine.arguments.contains("--selftest") {
     exit(0)
 }
 
+let engine = AVAudioEngine()
+var paused = false
+
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
 let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -69,6 +72,22 @@ statusItem.button?.title = "🎤 …"
 statusItem.menu = NSMenu()
 statusItem.menu!.addItem(withTitle: "Sing a perfect C (±\(Int(toleranceCents))¢, any octave)", action: nil, keyEquivalent: "")
 statusItem.menu!.addItem(.separator())
+
+final class PauseToggle: NSObject {
+    @objc func toggle(_ item: NSMenuItem) {
+        paused.toggle()
+        if paused {
+            engine.stop()  // releases the mic, so the orange indicator goes away
+            statusItem.button?.title = "🎤 ⏸"
+        } else {
+            do { try engine.start() } catch { statusItem.button?.title = "🎤 ⚠️" }
+        }
+        item.title = paused ? "Resume" : "Pause"
+    }
+}
+
+let pauseToggle = PauseToggle()
+statusItem.menu!.addItem(withTitle: "Pause", action: #selector(PauseToggle.toggle(_:)), keyEquivalent: "p").target = pauseToggle
 
 final class LoginItemToggle: NSObject {
     @objc func toggle(_ item: NSMenuItem) {
@@ -91,7 +110,6 @@ loginItem.target = loginToggle
 loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
 statusItem.menu!.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
-let engine = AVAudioEngine()
 
 func startListening() {
     let input = engine.inputNode
@@ -105,7 +123,7 @@ func startListening() {
         } else {
             title = "🎤 …"
         }
-        DispatchQueue.main.async { statusItem.button?.title = title }
+        DispatchQueue.main.async { if !paused { statusItem.button?.title = title } }
     }
     do { try engine.start() } catch { statusItem.button?.title = "🎤 ⚠️" }
 }
